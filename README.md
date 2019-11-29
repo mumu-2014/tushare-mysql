@@ -15,7 +15,8 @@ https://www.jianshu.com/p/3e681b2110a1
     
     2）ts_mysql_stock_dailybasic.py获取全部股票每日重要的基本面指标，使用了pro.daily_basic; 
     
-    注意：对于以上两个用于下载数据到mysql，请在run_stockQFQ.py和run_stock_dailybasic.py中注意first_update_flag的设置：    a)如果第一次使用这个程序，那么就需要下载所有的数据（这里默认的时间是从'19900101'开始--preprocess_stockQFQ.py中设置），那么在"run_stockQFQ.py"中，设置first_update_flag=True
+    注意：对于以上两个用于下载数据到mysql，请在run_stockQFQ.py和run_stock_dailybasic.py中注意first_update_flag的设置：    
+      a)如果第一次使用这个程序，那么就需要下载所有的数据（这里默认的时间是从'19900101'开始--     preprocess_stockQFQ.py中设置），那么在"run_stockQ.py"中，设置first_update_flag=True
 
       b) 如果只是更新当天或者过去几天的数据，则设置first_update_flag=False -- 基础积分每分钟内最多调取200次
     
