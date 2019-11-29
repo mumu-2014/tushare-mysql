@@ -22,5 +22,10 @@ https://www.jianshu.com/p/3e681b2110a1
     
     3）get_stock_from_sql.py是从mysql中读取数据，然后转换成pandas的dataframe
 
+5. 给mysql中的每张表格直接建立索引,用来加快提取数据的速度（感谢tushare进阶群里某位大佬给的建议）
+    create index stock_all_qfq_idx on stock_all_qfq ( stock_code, trade_date);
+    
+    create index stock_dailybasic_idx on stock_dailybasic (ts_code, trade_date); 
+
 
 如果在运行过程中有任何关于code问题，请联系qq:296867865,注明：tushare-mysql。  
