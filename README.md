@@ -21,6 +21,8 @@ https://www.jianshu.com/p/3e681b2110a1
       b) 如果只是更新当天或者过去几天的数据，则设置first_update_flag=False -- 基础积分每分钟内最多调取200次
     
     3）get_stock_from_sql.py是从mysql中读取数据，然后转换成pandas的dataframe
+    
+    4) ts_mysql_stock_index_qfq.py获取常用的几种指数日线行情（前复权）
 
 5. 给mysql中的每张表格直接建立索引,用来加快提取数据的速度（感谢tushare进阶群里某位大佬给的建议）
     create index stock_all_qfq_idx on stock_all_qfq ( stock_code, trade_date);
