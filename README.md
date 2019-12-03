@@ -11,7 +11,7 @@ https://www.jianshu.com/p/3e681b2110a1
    
 4。然后就可以使用我提供的程序了(程序主要是从tushare网址中下载数据，然后存入mysql数据库，最后从mysql数据库中获取数据）：
 
-    1) ts_mysql_stock_all_qfq,下载前复权的日线行情数据 ( 用了通用行情接口ts.pro_bar获取数据 —如果积分不够，可以使用pro.daily)
+    1) ts_mysql_stock_all_qfq,下载前复权的日线或分钟行情数据 ( 用了通用行情接口ts.pro_bar获取数据 —如果积分不够，可以使用pro.daily)
     
     2）ts_mysql_stock_dailybasic.py获取全部股票每日重要的基本面指标，使用了pro.daily_basic; 
     
@@ -28,6 +28,9 @@ https://www.jianshu.com/p/3e681b2110a1
     create index stock_all_qfq_idx on stock_all_qfq ( stock_code, trade_date);
     
     create index stock_dailybasic_idx on stock_dailybasic (ts_code, trade_date); 
+    
+    
+    更新 Dec. 3, 2019：根据tushare进阶群里讨论的意见，每日更新时候可以每次得到最多100只股票，而不是像现在每次只获取一只股票，因此在ts_mysql_stock_all_qfq.py中添加两个程序：mysql_stockQFQ_batch.py & run_stockQFQ_batch.py,这样更新速度至少是加快100倍？（没有验证，等待大家告诉我^_^
 
 
 如果在运行过程中有任何关于code问题，请联系qq:296867865,注明：tushare-mysql。  

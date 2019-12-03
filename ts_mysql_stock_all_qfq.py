@@ -8,6 +8,7 @@ This script is to download data from https://tushare.pro/document/2?doc_id=25
 2。如果只是更新当天或者过去几天的数据，则设置first_update_flag=False -- 基础积分每分钟内最多调取200次
 
 Written by mumu-2014 on Oct. 25, 2019 in Shanghai, China.
+Modified by mumu-2014 on Dec. 3, 2019 in Shanghai, China.
 """
 import tushare as ts
 import pymysql
@@ -88,7 +89,7 @@ def mysql_stockQFQ( db, cursor, pro, itx, stock_pool,
                   start_dt, end_dt, sql_insert, sql_value ):
     # -------------获取上市公司财务利润表数据------------
     df = ts.pro_bar( ts_code=stock_pool[ itx ], asset='E',
-                     api=pro, adj='qfq',
+                     api=pro, adj='qfq', freq='D',
                      start_date=start_dt, end_date=end_dt )
 
     if df is not None:
@@ -170,6 +171,91 @@ def run_stockQFQ( db, pro, first_update_flag=False ):
     db.close()
 
 
+#-----使用ts.pro_bar()获得batch——code（100个）-------
+def mysql_stockQFQ_batch( db, cursor, pro, batch_codes, start_dt, end_dt, sql_insert, sql_value ):
+    # -------------获取获取股票行情数据------------
+    df = ts.pro_bar( ts_code=batch_codes, asset='E',
+                     api=pro, adj='qfq', freq='D',
+                     start_date=start_dt, end_date=end_dt )
+    #
+    if df is not None:
+        #---改变列名
+        df.rename( columns={ 'change': 'close_chg' }, inplace=True )
+
+        df.drop_duplicates( inplace=True )
+        df = df.sort_values( by=[ 'trade_date' ], ascending=False )
+        df.reset_index( inplace=True, drop=True )
+        c_len = df.shape[0]
+
+        for jtx in range( 0, c_len ):
+            resu0 = list( df.iloc[ c_len - 1 - jtx ] )
+            resu = []
+            for k in range( len( resu0 ) ):
+                if isinstance( resu0[ k ], str ):
+                    resu.append( resu0[ k ] )
+                elif isinstance( resu0[ k ], float ):
+                    if np.isnan( resu0[k] ):
+                        resu.append( -1 )
+                    else:
+                        resu.append( resu0[ k ] )
+                elif resu0[ k ] == None:
+                    resu.append( -1 )
+
+            #save into mysql database
+            try:
+                sql_impl = sql_insert + sql_value
+                sql_impl = sql_impl  % tuple( resu )
+                cursor.execute(sql_impl )
+                db.commit()
+
+            except Exception as err:
+                print( err )
+                continue
+
+
+def run_stockQFQ_batch( db, pro, first_update_flag=False ):
+    # -----查询当前所有正常上市交易的股票列表---------
+    data = pro.stock_basic(exchange='', list_status='L' )
+    # 设定需要获取数据的股票池
+    stock_pool = data['ts_code'].tolist()
+    #print( stock_pool.index( '002427.SZ') )
+
+    # ----- create an object cursor: 模块主要的作用就是用来和数据库交互的
+    cursor = db.cursor()
+    # 获得跟数据库互动的参数
+    sql_insert, sql_value, start_dt, end_dt = preprocess_stockQFQ( cursor, pro )
+
+    if first_update_flag:
+        itx = 0
+        while itx < len(stock_pool):
+            print('itx = ', itx, ', code = ', stock_pool[itx])
+            mysql_stockQFQ(db, cursor, pro, itx, stock_pool, start_dt, end_dt, sql_insert, sql_value)
+            # ======update index=========
+            itx += 1
+    else:
+        btx = 0
+        batch_size = 100
+        batch_index = np.arange( len( stock_pool ) / batch_size + 1)
+
+        while btx < len( batch_index ):
+            batch_start = btx * batch_size
+            batch_end = ( btx + 1 ) * batch_size
+            batch_codes = ", ".join( stock_pool[ batch_start : batch_end ] )
+            print('btx = ', btx, ', batch_codes: ', batch_codes )
+            #
+            mysql_stockQFQ_batch(db, cursor, pro, batch_codes, stock_pool, start_dt, end_dt, sql_insert, sql_value)
+
+            #======update index=========
+            btx += 1
+
+            #========================================
+
+    print('All Finished!')
+    #------------
+    cursor.close()
+    db.close()
+
+
 if __name__ == '__main__':
     # ===============建立数据库连接,剔除已入库的部分============================
     # connect database
@@ -190,5 +276,10 @@ if __name__ == '__main__':
     # 这里默认的时间是从'19900101'开始--preprocess_stockQFQ.py中设置
     # first_update_flag=True
     #如何只是更新当天或者过去几天的数据，则设置first_update_flag=False -- 基础积分每分钟内最多调取200次
-    run_stockQFQ(db, pro, first_update_flag=True )
+    #使用通用行情接口
+    #run_stockQFQ(db, pro, first_update_flag=True )
 
+    #modified by mumu-2014 on Dec. 3, 2019:
+    # 使用batch_code 每次读取100只股票信息而不是每次读取一只股票
+    # 然后再按照原来的方法入库
+    run_stockQFQ_batch(db, pro, first_update_flag=True)
