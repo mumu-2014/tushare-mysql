@@ -243,7 +243,7 @@ def run_stockQFQ_batch( db, pro, first_update_flag=False ):
             batch_codes = ", ".join( stock_pool[ batch_start : batch_end ] )
             print('btx = ', btx, ', batch_codes: ', batch_codes )
             #
-            mysql_stockQFQ_batch(db, cursor, pro, batch_codes, stock_pool, start_dt, end_dt, sql_insert, sql_value)
+            mysql_stockQFQ_batch(db, cursor, pro, batch_codes, start_dt, end_dt, sql_insert, sql_value)
 
             #======update index=========
             btx += 1
