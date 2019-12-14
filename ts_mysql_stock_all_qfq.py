@@ -1,8 +1,8 @@
 """
-This script is to download data from https://tushare.pro/document/2?doc_id=25
+The ts_mysql_stock_all_qfq.py（从tushare下载所有股票的前复权数据到mysql数据库）is to download data from https://tushare.pro/document/2?doc_id=25
 复权类型(只针对股票)：qfq前复权
 
-1。如果第一次使用这个程序，那么就需要下载所有的数据（这里默认的时间是从'19900101'开始--preprocess_stockQFQ.py中设置），
+1。如果第一次使用这个程序(ts_mysql_stock_all_qfq.py)，那么就需要下载所有的数据（这里默认的时间是从'19900101'开始--preprocess_stockQFQ.py中设置），
    那么在"run_stockQFQ.py"中，设置first_update_flag=True
 
 2。如果只是更新当天或者过去几天的数据，则设置first_update_flag=False -- 基础积分每分钟内最多调取200次
@@ -15,6 +15,7 @@ import pymysql
 import datetime
 import time
 import numpy as np
+import pandas as pd 
 
 
 def preprocess_stockQFQ(cursor, pro ):
@@ -22,7 +23,7 @@ def preprocess_stockQFQ(cursor, pro ):
     sql_dabase = 'use ts_stock;'
     cursor.execute(sql_dabase)
 
-    # ------- 利润表： 创建表格---------
+    # -------创建表格---------
     sql_comm = "create table if not exists stock_all_qfq " \
                "( id int not null auto_increment primary key,"
 
@@ -39,7 +40,7 @@ def preprocess_stockQFQ(cursor, pro ):
     for ctx in range( 0, len( cols ) ):
         col = cols[ctx]
         if isinstance(df[col].iloc[0], str):
-            sql_comm += col + " varchar(40),"
+            sql_comm += col + " varchar(40), "
             sql_insert += col + ', '
             sql_value += "'%s', "
             str_index.append(ctx)
@@ -61,7 +62,7 @@ def preprocess_stockQFQ(cursor, pro ):
 
     # ------------------------
     #
-    sql_table = "select * from stock_all_qfq where ts_code = '000001.SZ' " \
+    sql_table = "select trade_date from stock_all_qfq where ts_code = '000001.SZ' " \
                 "order by trade_date desc limit 0, 1; "
     cursor.execute(sql_table)
     res = cursor.fetchall()
@@ -73,7 +74,7 @@ def preprocess_stockQFQ(cursor, pro ):
         end_dt = time_temp.strftime('%Y%m%d')
         print('start_date: ', start_dt, ', end_date: ', end_dt)
     else:
-        last_trade_date = res[0][2]
+        last_trade_date = res[0][0]
         #
         start_dt = (datetime.datetime.strptime(last_trade_date, '%Y%m%d')
                     + datetime.timedelta(days=1)).strftime("%Y%m%d")
@@ -87,10 +88,24 @@ def preprocess_stockQFQ(cursor, pro ):
 
 def mysql_stockQFQ( db, cursor, pro, itx, stock_pool,
                   start_dt, end_dt, sql_insert, sql_value ):
-    # -------------获取上市公司财务利润表数据------------
+    # -------------获取日线行情数据------------
     df = ts.pro_bar( ts_code=stock_pool[ itx ], asset='E',
                      api=pro, adj='qfq', freq='D',
                      start_date=start_dt, end_date=end_dt )
+                     
+    #-------modified by mumu-2014 on Dec. 14, 2019 in Shanghai, China----
+    if len( df ) == 4000: #最多下载4000条记录
+        last_download_date = df[ 'trade_date' ].iloc[ -1 ]
+        #
+        last_download_date = (datetime.datetime.strptime( last_download_date, '%Y%m%d')
+                              - datetime.timedelta(days=1)).strftime("%Y%m%d")
+
+        df2 = ts.pro_bar( ts_code=stock_pool[ itx ], asset='E',
+                         api=pro, adj='qfq', freq='D',
+                         start_date=start_dt, end_date=last_download_date )
+
+        if len(df2 ) > 0:
+            df = pd.concat( [ df, df2 ], axis=0 )
 
     if df is not None:
         #---改变列名

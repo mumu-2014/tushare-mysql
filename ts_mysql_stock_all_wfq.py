@@ -1,16 +1,18 @@
 """
-This script is to download data from https://tushare.pro/document/2?doc_id=25
+The ts_mysql_stock_all_wfq.py (从tushare下载所有的股票未复权股票数据到mysql数据库）script is to download data from https://tushare.pro/document/2?doc_id=25
 复权类型(只针对股票)：wfq未复权
 
 Note：由于权限问题，最多拿到4000条历史记录
 
 Written by mumu-2014 on Dec.3, 2019 in Shanghai, China.
+Modified by mumu-2014 on Dec. 14, 2019 in Shanghai, China.
 """
 import tushare as ts
 import pymysql
 import datetime
 import time
 import numpy as np
+import pandas as pd
 
 
 def preprocess_stock_WFQ(cursor, pro, sqlTable='stock_all_wfq' ):
@@ -64,7 +66,7 @@ def preprocess_stock_WFQ(cursor, pro, sqlTable='stock_all_wfq' ):
 
     # ------------------------
     #
-    sql_table = "select * from %s where ts_code = '000001.SZ' " \
+    sql_table = "select trade_date from %s where ts_code = '000001.SZ' " \
                 "order by trade_date desc limit 0, 1; " % ( sqlTable )
     cursor.execute(sql_table)
     res = cursor.fetchall()
@@ -76,7 +78,7 @@ def preprocess_stock_WFQ(cursor, pro, sqlTable='stock_all_wfq' ):
         end_dt = time_temp.strftime('%Y%m%d')
         print('start_date: ', start_dt, ', end_date: ', end_dt)
     else:
-        last_trade_date = res[0][2]
+        last_trade_date = res[0][0]
         #
         start_dt = (datetime.datetime.strptime(last_trade_date, '%Y%m%d')
                     + datetime.timedelta(days=1)).strftime("%Y%m%d")
@@ -99,13 +101,21 @@ def mysql_stock_WFQ( db, cursor, pro, itx, stock_pool,
     df1 = ts.pro_bar( ts_code=stock_pool[ itx ], asset='E',
                      api=pro, adj=None, freq='D', adjfactor=False,
                      start_date=start_dt, end_date=end_dt )
-    #two options: 1)继续下载以前的历史数据--》不过这些都没有多大价值
-    #2）只保存4000记录
-    # 返回未复权数据和复权因子，自己下来算前复权&后复权
-    # df2 = ts.pro_bar(ts_code=stock_pool[itx], asset='E',
-    #                  api=pro, adj=None, freq='D', adjfactor=False,
-    #                  start_date=start_dt, end_date=df1[ 'trade_date' ].iloc[ -1 ] )
+    #two options: 1)继续下载以前的历史数据--》不过这些都没有多大价值; 2）只保存4000记录
+    #-------modified by mumu-2014 on Dec. 14, 2019 in Shanghai, China----
+    if len( df1 ) == 4000: #最多下载4000条记录
+        last_download_date = df1[ 'trade_date' ].iloc[ -1 ]
+        #
+        last_download_date = (datetime.datetime.strptime( last_download_date, '%Y%m%d')
+                              - datetime.timedelta(days=1)).strftime("%Y%m%d")
 
+        df2 = ts.pro_bar( ts_code=stock_pool[ itx ], asset='E',
+                          api=pro, adj=None, freq='D', adjfactor=False,
+                          start_date=start_dt, end_date=last_download_date )
+
+        if len(df2 ) > 0:
+            df1 = pd.concat( [ df1, df2 ], axis=0 )
+    #---合并---
     adjfactor = adjfactor.drop( [ 'ts_code' ], axis=1 )
     #merge together
     df = df1.merge(  adjfactor, how='inner', on='trade_date' )

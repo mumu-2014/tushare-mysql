@@ -54,7 +54,7 @@ https://www.jianshu.com/p/3e681b2110a1
             6  300376.SZ  20181231  20190711      0.0      0.025000
             """
             
-    因此前复权计算出来的数据我所提到的两种方法存在误差，
+    因此前复权计算出来的数据根据我所提到的两种方法是存在一点细微的误差，
     
            “”“
                     ts_code trade_date  close  ts_qfq  me_qfq    diff
@@ -83,5 +83,17 @@ https://www.jianshu.com/p/3e681b2110a1
             9  300376.SZ   20140219  62.51  2.7230  2.646697  0.076303
 
 
+更新 Dec. 15, 2019  --------
+         1）关于日线行情数据的下载增加了下载超过4000条记录的语句（以前版本由于只连接一次，由于接口限制，最多只取到4000条记录）； 
+         
+         2） 更新了一个bug --根据tushare群友反馈，其使用windows系统，在数据写入mysql时候，ts_code 和trade_date次序发生变换，导致继续下载写入不成功，因此在确定preprocess_stock_xxx.py程序中的start_dt，修改了：
+         
+                sql_table = "select trade_date from %s where ts_code = '000001.SZ' " \
+                            "order by trade_date desc limit 0, 1; " % ( sqlTable )
+                cursor.execute(sql_table)
+                res = cursor.fetchall()
+                
+                -->  last_trade_date = res[0][0]
+                
 
 如果在运行过程中有任何关于code问题，请联系qq:296867865,注明：tushare-mysql。  

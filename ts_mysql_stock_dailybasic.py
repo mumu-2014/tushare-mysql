@@ -1,5 +1,5 @@
 """
-This script is to download 获取全部股票每日重要的基本面指标 from tushare, and save it in mysql.
+The ts_mysql_stock_dailybasic.py(从tushare下载所有股票的每日指标）script is to download 获取全部股票每日重要的基本面指标 from tushare, and save it in mysql.
 
 1。如果第一次使用这个程序，那么就需要下载所有的数据（这里默认的时间是从'19900101'开始--preprocess_stockQFQ.py中设置），
    那么在"run_stockQFQ.py"中，设置first_update_flag=True
@@ -19,7 +19,7 @@ def preprocess_stock_dailybasic(cursor, pro ):
     sql_dabase = 'use ts_stock;'
     cursor.execute(sql_dabase)
 
-    # ------- 利润表： 创建表格---------
+    # -------创建表格---------
     sql_comm = "create table if not exists stock_dailybasic " \
                "( id int not null auto_increment primary key,"
 
@@ -32,7 +32,7 @@ def preprocess_stock_dailybasic(cursor, pro ):
     for ctx in range(len(cols)):
         col = cols[ctx]
         if isinstance(df[col].iloc[0], str):
-            sql_comm += col + " varchar(40),"
+            sql_comm += col + " varchar(40), "
             sql_insert += col + ', '
             sql_value += "'%s', "
             str_index.append(ctx)
@@ -54,19 +54,19 @@ def preprocess_stock_dailybasic(cursor, pro ):
 
     # ------------------------
     #
-    sql_table = "select * from stock_dailybasic where ts_code = '000001.SZ' " \
+    sql_table = "select trade_date from stock_dailybasic where ts_code = '000001.SZ' " \
                 "order by trade_date desc limit 0, 1; "
     cursor.execute(sql_table)
     res = cursor.fetchall()
 
     if len(res) == 0:
-        # =====================设定获取日线行情的初始日期和终止日期=======================
+        # =====================设定获取每日指标的初始日期和终止日期=======================
         start_dt = '19900101'  # '19910101' --- 下载时候中间改错日期
         time_temp = datetime.datetime.now() - datetime.timedelta(days=1)
         end_dt = time_temp.strftime('%Y%m%d')
         print('start_date: ', start_dt, ', end_date: ', end_dt)
     else:
-        last_trade_date = res[0][2]
+        last_trade_date = res[0][0]
         #
         start_dt = (datetime.datetime.strptime(last_trade_date, '%Y%m%d')
                     + datetime.timedelta(days=1)).strftime("%Y%m%d")
@@ -79,7 +79,7 @@ def preprocess_stock_dailybasic(cursor, pro ):
 
 def mysql_stock_dailybasic( db, cursor, pro, itx, stock_pool,
                             start_dt, end_dt, sql_insert, sql_value ):
-    # -------------获取上市公司财务利润表数据------------
+    # -------------获取获取每日指标数据------------
     df = pro.daily_basic(ts_code=stock_pool[itx], start_date=start_dt, end_date=end_dt )
     df.drop_duplicates( inplace=True )
     df = df.sort_values( by=[ 'trade_date' ], ascending=False )

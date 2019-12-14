@@ -1,5 +1,5 @@
 """
-This script is to download 指数日线行情 from https://tushare.pro/document/2?doc_id=95
+The ts_mysql_stock_index_qfq.py（从tushare下载指数数据到mysql数据库 -- 注意指数是没有复权这个概念的） script is to download 指数日线行情 from https://tushare.pro/document/2?doc_id=95
 复权类型(只针对股票)：qfq前复权
 
 Modified by mumu-2014 Wei on Nov.30, 2019 in Shanghai, China.
@@ -56,7 +56,7 @@ def preprocess_index_QFQ(cursor, pro, ts_symbol='000001', market='SH' ):
 
     # ------------------------
     #
-    sql_table = "select * from index_%s%s_qfq where ts_code = %s " \
+    sql_table = "select trade_date from index_%s%s_qfq where ts_code = %s " \
                 "order by trade_date desc limit 0, 1; " % ( market, ts_symbol, ts_symbol )
     cursor.execute(sql_table)
     res = cursor.fetchall()
@@ -68,7 +68,7 @@ def preprocess_index_QFQ(cursor, pro, ts_symbol='000001', market='SH' ):
         end_dt = time_temp.strftime('%Y%m%d')
         print('start_date: ', start_dt, ', end_date: ', end_dt)
     else:
-        last_trade_date = res[0][2]
+        last_trade_date = res[0][0]
         #
         start_dt = (datetime.datetime.strptime(last_trade_date, '%Y%m%d')
                     + datetime.timedelta(days=1)).strftime("%Y%m%d")
@@ -82,7 +82,7 @@ def preprocess_index_QFQ(cursor, pro, ts_symbol='000001', market='SH' ):
 
 def mysql_index_QFQ( db, cursor, pro, ts_code,
                   start_dt, end_dt, sql_insert, sql_value ):
-    # -------------获取上市公司财务利润表数据------------
+    # -------------获取交易的指数数据------------
     df = ts.pro_bar( ts_code=ts_code, asset='I',
                      api=pro, adj='qfq',
                      start_date=start_dt, end_date=end_dt )
